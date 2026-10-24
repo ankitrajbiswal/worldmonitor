@@ -65,7 +65,9 @@ function expectRenderedCenter(map: CenterMap, size: { width: number; height: num
   const projected = map.getProjection(size.width, size.height)([lon, lat])!;
   const transform = map.wrapper.style.transform.match(/translate\(([-\d.e]+)px, ([-\d.e]+)px\) scale\(([-\d.e]+)\)/)!;
   expect(transform).not.toBeNull();
-  const [, x, y, zoom] = transform.map(Number);
+  const x = Number(transform[1]);
+  const y = Number(transform[2]);
+  const zoom = Number(transform[3]);
   expect(projected[0] * zoom + x).toBeCloseTo(size.width / 2, 6);
   expect(projected[1] * zoom + y).toBeCloseTo(size.height / 2, 6);
   expect(map.getCenter()?.lat).toBeCloseTo(lat, 6);
@@ -104,7 +106,7 @@ describe('SVG map centers requested while hidden', () => {
   });
 
   it('discards the hidden request when a region preset replaces it', () => {
-    const { map, size, reveal } = createMap();
+    const { map, reveal } = createMap();
     map.setCenter(48.86, 2.35);
     map.setView('global');
     reveal();
