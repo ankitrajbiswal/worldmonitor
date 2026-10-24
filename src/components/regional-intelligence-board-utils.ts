@@ -30,7 +30,7 @@ export const BOARD_REGIONS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'sub-saharan-africa', label: 'Sub-Saharan Africa' },
 ];
 
-export const DEFAULT_REGION_ID = 'mena';
+export const DEFAULT_REGION_ID = 'east-asia';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Request-sequence arbitrator (race condition fix for PR #2963 review)
