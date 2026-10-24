@@ -79,9 +79,7 @@ const parseClampedFloatParam = (
   max: number
 ): number | undefined => {
   const rawValue = params.get(key);
-  const value = rawValue !== null && rawValue.trim() !== ''
-    ? Number.parseFloat(rawValue)
-    : NaN;
+  const value = rawValue ? Number.parseFloat(rawValue) : NaN;
   return Number.isFinite(value) ? clamp(value, min, max) : undefined;
 };
 

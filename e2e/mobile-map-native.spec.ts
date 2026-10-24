@@ -1,6 +1,25 @@
-import { devices, expect, test } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
+import { geoEquirectangular } from 'd3';
 
 const MOBILE_VIEWPORT = devices['iPhone 14 Pro Max'];
+
+async function expectRenderedCenter(page: Page, lat: number, lon: number) {
+  await expect(page.locator('#mapContainer')).toHaveClass(/svg-mode/);
+  await expect.poll(async () => {
+    const size = await page.locator('#mapContainer').evaluate(el => ({ width: el.clientWidth, height: el.clientHeight }));
+    const point = geoEquirectangular()
+      .scale(Math.min(size.width / (2 * Math.PI), size.height / (128 * Math.PI / 180)))
+      .center([0, 8])
+      .translate([size.width / 2, size.height / 2])([lon, lat])!;
+    return page.locator('#mapSvg').evaluate((el, [x, y]) => {
+      const matrix = (el as SVGSVGElement).getScreenCTM();
+      if (!matrix) return Infinity;
+      const rendered = new DOMPoint(x, y).matrixTransform(matrix);
+      const bounds = document.getElementById('mapContainer')!.getBoundingClientRect();
+      return Math.hypot(rendered.x - bounds.x - bounds.width / 2, rendered.y - bounds.y - bounds.height / 2);
+    }, point);
+  }).toBeLessThan(1);
+}
 
 test.describe('Mobile map native experience', () => {
   const { defaultBrowserType: _bt, ...mobileContext } = MOBILE_VIEWPORT;
@@ -70,6 +89,7 @@ test.describe('Mobile map native experience', () => {
       await page.locator('.map-collapse-btn').click();
       await expect(page.locator('#mapSection')).not.toHaveClass(/collapsed/);
       await expect(page.locator('#mapContainer')).toBeVisible();
+      await expectRenderedCenter(page, 48.86, 2.35);
       await expect.poll(() => new URL(page.url()).searchParams.get('lat')).toBe('48.8600');
       await expect.poll(() => new URL(page.url()).searchParams.get('lon')).toBe('2.3500');
       await expect(page.locator('#regionSelect')).toHaveValue('eu');
@@ -81,6 +101,7 @@ test.describe('Mobile map native experience', () => {
       await page.locator('.map-collapse-btn').click();
       await expect(page.locator('#mapSection')).not.toHaveClass(/collapsed/);
       await expect(page.locator('#mapContainer')).toBeVisible();
+      await expectRenderedCenter(page, 0, 0);
       await expect.poll(() => new URL(page.url()).searchParams.get('lat')).toBe('0.0000');
       await expect.poll(() => new URL(page.url()).searchParams.get('lon')).toBe('0.0000');
     });

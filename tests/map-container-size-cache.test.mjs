@@ -82,8 +82,8 @@ describe('Map one-shot viewport commands read current size (#5022 review)', () =
   it('ResizeObserver records zero-size (hidden) transitions, gating only the render on visibility', () => {
     const ro = mapSrc.slice(mapSrc.indexOf('private setupResizeObserver('));
     const body = ro.slice(0, ro.slice(1).search(/\n {2}(?:public|private) \w+\(/) + 1);
-    // scheduleRender is gated on a visible size...
-    assert.match(body, /if \(width > 0 && height > 0\) \{[\s\S]*?this\.scheduleRender\(\);\s*\}/, 'scheduleRender must fire only for a visible size');
+    // Resize-driven rendering is gated on a visible size...
+    assert.match(body, /if \(width > 0 && height > 0\) \{\s*this\.resize\(\);\s*\}/, 'resize must fire only for a visible size');
     // ...but the cache update must run for ANY change (including -> 0), so the
     // old combined visible-only guard must be gone.
     assert.doesNotMatch(body, /width > 0 && height > 0 && \(width !== lastWidth/, 'must not gate the cache update behind the visible-size check (hidden state must be recorded so render() skips)');
@@ -92,17 +92,6 @@ describe('Map one-shot viewport commands read current size (#5022 review)', () =
 
   it('render paths keep the zero-size skip so a hidden map does not render off stale dimensions', () => {
     assert.match(mapSrc, /if \(width === 0 \|\| height === 0\)/, 'renderWithSize must skip when the container has no dimensions');
-  });
-
-  it('preserves a center requested while collapsed and applies it when revealed', () => {
-    const setCenter = methodSlice('setCenter');
-    const getCenter = methodSlice('getCenter');
-    const resizeObserver = mapSrc.slice(mapSrc.indexOf('private setupResizeObserver('));
-    const resizeBody = resizeObserver.slice(0, resizeObserver.slice(1).search(/\n {2}(?:public|private) \w+\(/) + 1);
-
-    assert.match(setCenter, /if \(width === 0 \|\| height === 0\) \{\s*this\.pendingCenter = \{ lat, lon \};\s*return;/);
-    assert.match(getCenter, /if \(this\.pendingCenter\) return \{ \.\.\.this\.pendingCenter \};/);
-    assert.match(resizeBody, /if \(width > 0 && height > 0\) \{\s*const pendingCenter = this\.pendingCenter;[\s\S]*?this\.setCenter\(pendingCenter\.lat, pendingCenter\.lon\);/);
   });
 });
 

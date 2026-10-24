@@ -417,12 +417,7 @@ export class MapComponent {
         // visible ones (#5022 review). Only a visible size is worth rendering.
         this.rememberContainerSize({ width, height });
         if (width > 0 && height > 0) {
-          const pendingCenter = this.pendingCenter;
-          if (pendingCenter) {
-            this.pendingCenter = null;
-            this.setCenter(pendingCenter.lat, pendingCenter.lon);
-          }
-          this.scheduleRender();
+          this.resize();
         }
       }
     });
@@ -441,11 +436,13 @@ export class MapComponent {
     const wasResizing = this.isResizing;
     this.isResizing = value;
     if (wasResizing && !value) {
-      this.scheduleRender();
+      this.resize();
     }
   }
 
   public resize(): void {
+    const pendingCenter = this.pendingCenter;
+    if (pendingCenter) this.setCenter(pendingCenter.lat, pendingCenter.lon);
     this.scheduleRender();
   }
 
