@@ -288,6 +288,9 @@ export class MapComponent {
   private labelVisibilityScheduled = false;
   private pendingLabelVisibilityZoom = 1;
   private lastContainerSize = { width: 0, height: 0 };
+  // Mobile can intentionally collapse the map to 0x0 at startup. Preserve an
+  // initial deep-link center until the map is revealed and can project it.
+  private pendingCenter: { lat: number; lon: number } | null = null;
   // #5080 slice 2: last zoom (4dp) whose overlay counter-scale CSS vars were
   // written — lets applyTransform() skip same-value setProperty calls that
   // would restyle every marker on every render pass.
@@ -413,7 +416,14 @@ export class MapComponent {
         // and lets a reveal center off current dimensions instead of the last
         // visible ones (#5022 review). Only a visible size is worth rendering.
         this.rememberContainerSize({ width, height });
-        if (width > 0 && height > 0) this.scheduleRender();
+        if (width > 0 && height > 0) {
+          const pendingCenter = this.pendingCenter;
+          if (pendingCenter) {
+            this.pendingCenter = null;
+            this.setCenter(pendingCenter.lat, pendingCenter.lon);
+          }
+          this.scheduleRender();
+        }
       }
     });
     this.resizeObserver.observe(this.container);
@@ -4340,6 +4350,7 @@ export class MapComponent {
   }
 
   public setView(view: MapView, zoom?: number): void {
+    this.pendingCenter = null;
     this.state.view = view;
 
     // Region-specific zoom and pan settings
@@ -4951,6 +4962,7 @@ export class MapComponent {
   }
 
   public getCenter(): { lat: number; lon: number } | null {
+    if (this.pendingCenter) return { ...this.pendingCenter };
     const { width, height } = this.readContainerSize();
     const projection = this.getProjection(width, height);
     if (!projection.invert) return null;
@@ -5000,6 +5012,11 @@ export class MapComponent {
   public setCenter(lat: number, lon: number): void {
     console.log('[Map] setCenter called:', { lat, lon });
     const { width, height } = this.readContainerSize();
+    if (width === 0 || height === 0) {
+      this.pendingCenter = { lat, lon };
+      return;
+    }
+    this.pendingCenter = null;
     const projection = this.getProjection(width, height);
     const pos = projection([lon, lat]);
     console.log('[Map] projected pos:', pos, 'container:', { width, height }, 'zoom:', this.state.zoom);
